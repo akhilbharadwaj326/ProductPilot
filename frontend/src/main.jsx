@@ -4,8 +4,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import App from './App.jsx'
 
-// Placeholder Client ID - user must provide their own for production
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com";
+// Load Client ID from environment variables (.env)
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

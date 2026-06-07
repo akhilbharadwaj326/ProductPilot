@@ -1,6 +1,7 @@
 # Environment variables
 .env
 .env.*
+!.env.example
 
 # Ignore IdeaForge old file
 IdeaForge_Product_Discovery_and_Strategy.md.md
