@@ -6,7 +6,7 @@ import logging
 
 from . import models
 from .database import engine
-from .routers import ai
+from .routers import ai, projects
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(projects.router)
 app.include_router(ai.router)
 
 @app.get("/")

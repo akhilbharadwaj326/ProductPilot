@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# Python
+venv/
+__pycache__/
+*.pyc
+
 # Ignore IdeaForge old file
 IdeaForge_Product_Discovery_and_Strategy.md.md
 IdeaForge_Product_Discovery_and_Strategy.md
