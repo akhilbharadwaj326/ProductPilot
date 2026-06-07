@@ -14,6 +14,7 @@ export const AuthPage = ({ mode = 'login' }) => {
     console.log('Google Auth Success:', credentialResponse);
     // Decode token or send to backend to verify
     // const decoded = jwt_decode(credentialResponse.credential);
+    localStorage.setItem('userRole', 'user');
     navigate('/');
   };
 
@@ -25,6 +26,8 @@ export const AuthPage = ({ mode = 'login' }) => {
     e.preventDefault();
     console.log(`Submitting ${mode} for:`, email);
     // Mock successful auth
+    const role = email === 'admin@productpilot.com' ? 'admin' : 'user';
+    localStorage.setItem('userRole', role);
     navigate('/');
   };
 

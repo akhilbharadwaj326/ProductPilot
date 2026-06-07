@@ -2,6 +2,11 @@ import os
 import json
 import logging
 import time
+from dotenv import load_dotenv
+
+# Force load .env from backend directory
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
 from openai import OpenAI
 
 # Initialize logger
@@ -35,9 +40,9 @@ def execute_with_backoff(func, max_retries=3, base_delay=2):
 def _call_json_api(user_prompt: str) -> dict:
     def _call_openai():
         response = client.chat.completions.create(
-            # Using gpt-4-turbo-preview because the system prompt is ~19,000 tokens. 
+            # Using gpt-4o because the system prompt is ~19,000 tokens. 
             # This requires a 128k context window to process safely without truncation.
-            model="gpt-4-turbo-preview", 
+            model="gpt-4o", 
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": MASTER_SYSTEM_PROMPT},
@@ -58,10 +63,13 @@ def generate_prd(idea: str, target_audience: str, business_goals: str) -> dict:
     Business Goals: {business_goals}
     
     Your output MUST be a valid JSON object matching Schema 1 (Persona) and Schema 2 (PRD) combined under a root object.
+    CRITICAL: You MUST include an `executive_summary` field in the `prd` object.
+    You MUST adhere strictly to the PRD format fields (Executive Summary, Problem Statement, Goals, Metrics, Target Users, Scope, User Stories, Functional Reqs, Non-Functional Reqs, User Flow, UX/UI, Acceptance Criteria, Assumptions, Constraints, Dependencies, Risks, Release Plan, Open Questions, Appendix). Ensure these fields exist in the JSON. DO NOT include numbering (like "1. ", "2. ") in the field contents.
+    Be highly detailed, exhaustive, and precise. Avoid vagueness.
     Example:
     {{
       "personas": [ {{ ...schema 1... }} ],
-      "prd": {{ ...schema 2... }}
+      "prd": {{ ...schema 2..., "executive_summary": "Detailed executive summary here...", "out_of_scope": "...", "assumptions": "...", "dependencies": "..." }}
     }}
     
     Output ONLY valid JSON.

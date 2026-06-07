@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Rocket, Loader2, CheckCircle2, ChevronRight, Edit3 } from 'lucide-react';
+import { Rocket, Loader2, CheckCircle2, ChevronRight, Edit3, Save, ChevronDown, Users, Map, ListTodo } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useProject } from '../ProjectContext';
+import { supabase } from '../supabaseClient';
 
 export const IdeaWizard = () => {
-  const [step, setStep] = useState(1); // 1: Idea, 2: PRD Review, 3: Epics Review, 4: Done
+  const navigate = useNavigate();
+  const { createProject, setActiveProject } = useProject();
+  
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [projectId, setProjectId] = useState(null);
   
   // Form Data
   const [idea, setIdea] = useState('');
@@ -12,58 +17,98 @@ export const IdeaWizard = () => {
   const [goals, setGoals] = useState('');
   
   // Artifacts
-  const [prdArtifactId, setPrdArtifactId] = useState(null);
   const [prdData, setPrdData] = useState(null);
-  const [epicsArtifactId, setEpicsArtifactId] = useState(null);
+  const [personasData, setPersonasData] = useState(null);
   const [epicsData, setEpicsData] = useState(null);
+  const [roadmapData, setRoadmapData] = useState(null);
+  const [tasksData, setTasksData] = useState(null);
+
+  const [expandedSections, setExpandedSections] = useState({});
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const generatePRD = async () => {
     setLoading(true);
     try {
-      // 1. Create Project
+      // 1. Create temporary project in backend for the AI to attach to
       const projRes = await fetch('http://localhost:8000/api/projects/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: "New Project", description: idea })
+        body: JSON.stringify({ title: "Wizard Temp Project", description: idea })
       });
       const projData = await projRes.json();
-      setProjectId(projData.id);
+      const tempProjId = projData.id;
 
-      // 2. Generate PRD
+      // 2. Generate PRD using AI backend
       const prdRes = await fetch('http://localhost:8000/api/ai/generate/prd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          project_id: projData.id,
+          project_id: tempProjId,
           idea: idea,
           target_audience: audience,
           business_goals: goals
         })
       });
+      
+      if (!prdRes.ok) throw new Error(`Backend error: ${prdRes.status}`);
       const prdJson = await prdRes.json();
-      setPrdArtifactId(prdJson.artifact_id);
-      setPrdData(prdJson.data);
-      setStep(2);
+      
+      setPrdData(prdJson.data.prd || prdJson.data);
+      setPersonasData(prdJson.data.personas || []);
+      
+      window.tempPrdArtifactId = prdJson.artifact_id; 
+      
+      setStep(2); // Go to PRD Review
     } catch (err) {
       console.error(err);
-      alert("Failed to generate PRD. Ensure backend is running and OPENAI_API_KEY is valid.");
+      alert("Failed to generate PRD. Ensure backend is running and keys are valid.");
     } finally {
       setLoading(false);
     }
   };
 
-  const generateEpics = async () => {
+  const reviewPersonas = () => {
+    setStep(3);
+  };
+
+  const generateEpicsAndRoadmap = async () => {
     setLoading(true);
     try {
       const epicsRes = await fetch('http://localhost:8000/api/ai/generate/epics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artifact_id: prdArtifactId })
+        body: JSON.stringify({ artifact_id: window.tempPrdArtifactId })
       });
+      
+      if (!epicsRes.ok) throw new Error(`Backend error: ${epicsRes.status}`);
       const epicsJson = await epicsRes.json();
-      setEpicsArtifactId(epicsJson.artifact_id);
-      setEpicsData(epicsJson.data);
-      setStep(3);
+      
+      const epics = epicsJson.data.epics || epicsJson.data.features || [];
+      setEpicsData(epics);
+
+      // Auto-generate a Roadmap based on Epics
+      const generatedRoadmap = epics.map((epic, idx) => ({
+        id: `M${idx+1}`,
+        title: epic.title || `Milestone ${idx+1}`,
+        timeframe: `Month ${idx+1}`,
+        description: epic.description || 'Deliver core functionality',
+        status: idx === 0 ? 'In Progress' : 'Planned'
+      }));
+      setRoadmapData(generatedRoadmap);
+
+      // Auto-generate Tasks based on Epics
+      let generatedTasks = [];
+      epics.forEach((epic, idx) => {
+        generatedTasks.push({ title: `${epic.title || 'Epic'} - Backend Architecture`, effort: 5, priority: 'High', sprint: 'Sprint 1' });
+        generatedTasks.push({ title: `${epic.title || 'Epic'} - Frontend UI Integration`, effort: 3, priority: 'Medium', sprint: 'Sprint 1' });
+        generatedTasks.push({ title: `${epic.title || 'Epic'} - Testing & QA`, effort: 2, priority: 'Low', sprint: 'Sprint 2' });
+      });
+      setTasksData(generatedTasks);
+
+      setStep(4); // Go to Roadmap Review
     } catch (err) {
       console.error(err);
       alert("Failed to generate Epics.");
@@ -72,63 +117,135 @@ export const IdeaWizard = () => {
     }
   };
 
-  const finalizePlan = () => {
-    setStep(4);
+  const reviewBacklog = () => {
+    setStep(5);
+  };
+
+  const finalizePlan = async () => {
+    setLoading(true);
+    try {
+      // 1. Create Project in Supabase
+      const projectName = prdData?.title || idea.substring(0, 30);
+      const projectDesc = prdData?.executive_summary || "Generated by Idea Wizard";
+      
+      const newProject = await createProject(projectName, projectDesc);
+      if (!newProject) throw new Error("Failed to create project");
+
+      // 2. Map PRD format and save to Supabase
+      const fullPrd = {
+        title: prdData.title || "Product Requirements Document",
+        vision: prdData.executive_summary || "",
+        problem: prdData.problem_statement || idea,
+        goals: Array.isArray(prdData.success_metrics) ? prdData.success_metrics.join('\n') : prdData.success_metrics,
+        personas: audience,
+        inScope: "",
+        outOfScope: "",
+        userStories: "",
+        functionalReqs: "",
+        nonFunctionalReqs: "",
+        userFlow: "",
+        uxui: "",
+        acceptance: "",
+        assumptions: "",
+        constraints: "",
+        dependencies: "",
+        risks: "",
+        releasePlan: "",
+        openQuestions: "",
+        appendix: "",
+        epics: epicsData.map((e, i) => ({ id: `EPIC-${i+1}`, title: e.title, sprint: 'Sprint 1', tasks: 3 }))
+      };
+
+      await supabase.from('prds').insert([{ 
+        project_id: newProject.id, 
+        title: fullPrd.title, 
+        document_data: fullPrd 
+      }]);
+
+      // 3. Save Personas to Supabase
+      if (personasData && personasData.length > 0) {
+        const personasToInsert = personasData.map(p => ({
+          project_id: newProject.id,
+          name: p.name || p.role || 'User',
+          role: p.role || 'End User',
+          demographics: p.demographics || '',
+          goals: p.goals ? p.goals.join('\n') : '',
+          pain_points: p.pain_points ? p.pain_points.join('\n') : ''
+        }));
+        await supabase.from('personas').insert(personasToInsert);
+      }
+
+      // 4. Save Roadmap to Supabase
+      if (roadmapData && roadmapData.length > 0) {
+        await supabase.from('roadmaps').insert([{
+          project_id: newProject.id,
+          title: 'Initial Roadmap',
+          milestone_data: roadmapData
+        }]);
+      }
+
+      // 5. Create initial sprints and tasks
+      const { data: sprint1 } = await supabase.from('sprints').insert([{
+        project_id: newProject.id, title: 'Sprint 1', status: 'planned'
+      }]).select();
+      
+      const { data: sprint2 } = await supabase.from('sprints').insert([{
+        project_id: newProject.id, title: 'Sprint 2', status: 'planned'
+      }]).select();
+
+      if (sprint1 && sprint1.length > 0 && tasksData) {
+        const tasksToInsert = tasksData.map(task => ({
+          project_id: newProject.id,
+          sprint_id: task.sprint === 'Sprint 1' ? sprint1[0].id : sprint2[0].id,
+          content: task.title,
+          priority: task.priority,
+          effort: task.effort,
+          status: 'Todo'
+        }));
+        await supabase.from('tasks').insert(tasksToInsert);
+      }
+
+      setActiveProject(newProject);
+      navigate('/docs');
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save project to Supabase.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="content-area animate-fade-in">
+    <div className="content-area animate-fade-in" style={{ maxWidth: '900px' }}>
       
-      {/* Progress Indicator */}
-      <div className="wizard-progress" style={{ display: 'flex', gap: '12px', marginBottom: '32px', alignItems: 'center' }}>
-        <div className={`step-badge ${step >= 1 ? 'active' : ''}`} style={{ color: step >= 1 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>1. Discovery</div>
-        <ChevronRight size={16} color="var(--border-color)" />
-        <div className={`step-badge ${step >= 2 ? 'active' : ''}`} style={{ color: step >= 2 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>2. PRD Review</div>
-        <ChevronRight size={16} color="var(--border-color)" />
-        <div className={`step-badge ${step >= 3 ? 'active' : ''}`} style={{ color: step >= 3 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>3. Epics</div>
+      <div className="wizard-progress" style={{ display: 'flex', gap: '8px', marginBottom: '32px', alignItems: 'center', fontSize: '0.85rem' }}>
+        <div className={`step-badge ${step >= 1 ? 'active' : ''}`} style={{ color: step >= 1 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>1. Idea</div><ChevronRight size={14} color="var(--border-color)" />
+        <div className={`step-badge ${step >= 2 ? 'active' : ''}`} style={{ color: step >= 2 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>2. PRD</div><ChevronRight size={14} color="var(--border-color)" />
+        <div className={`step-badge ${step >= 3 ? 'active' : ''}`} style={{ color: step >= 3 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>3. Personas</div><ChevronRight size={14} color="var(--border-color)" />
+        <div className={`step-badge ${step >= 4 ? 'active' : ''}`} style={{ color: step >= 4 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>4. Roadmap</div><ChevronRight size={14} color="var(--border-color)" />
+        <div className={`step-badge ${step >= 5 ? 'active' : ''}`} style={{ color: step >= 5 ? 'var(--accent-color)' : 'var(--text-secondary)' }}>5. Backlog & Finalize</div>
       </div>
 
       {step === 1 && (
         <div className="animate-fade-in">
           <h1>Turn your idea into execution</h1>
-          <p>Describe your product idea, constraints, and goals. Our AI will instantly generate your PRD, user stories, and a prioritized sprint plan.</p>
-          
+          <p>Describe your product idea. Our AI will instantly generate your entire Workspace (PRD, Personas, Roadmap, and Sprints).</p>
           <div className="glass-card">
             <div className="input-group">
               <label className="input-label">Product Idea</label>
-              <textarea 
-                className="input-field" 
-                placeholder="E.g., An AI-powered workspace that turns raw product ideas into execution-ready plans..."
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-              ></textarea>
+              <textarea className="input-field" placeholder="An AI-powered workspace..." value={idea} onChange={(e) => setIdea(e.target.value)}></textarea>
             </div>
-
             <div className="input-group">
               <label className="input-label">Target Audience</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="E.g., Product Managers, Founders, Developers"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-              />
+              <input type="text" className="input-field" placeholder="Product Managers, Founders" value={audience} onChange={(e) => setAudience(e.target.value)} />
             </div>
-
             <div className="input-group">
               <label className="input-label">Key Business Goals</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="E.g., Reduce planning time by 80%"
-                value={goals}
-                onChange={(e) => setGoals(e.target.value)}
-              />
+              <input type="text" className="input-field" placeholder="Reduce planning time by 80%" value={goals} onChange={(e) => setGoals(e.target.value)} />
             </div>
-
             <button className="btn" style={{ marginTop: '16px' }} onClick={generatePRD} disabled={loading || !idea}>
               {loading ? <Loader2 size={18} className="animate-spin" /> : <Rocket size={18} />}
-              {loading ? 'Analyzing Idea...' : 'Generate Product Plan'}
+              {loading ? 'Generating Intelligence...' : 'Generate Workspace'}
             </button>
           </div>
         </div>
@@ -137,72 +254,124 @@ export const IdeaWizard = () => {
       {step === 2 && prdData && (
         <div className="animate-fade-in">
           <h1>Review Product Requirements</h1>
-          <p>The AI has drafted your PRD. Review and refine it before we break it down into Epics.</p>
-          
-          <div className="glass-card" style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-               <h2>{prdData.prd?.title || "Draft PRD"}</h2>
-               <button className="btn-icon" style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><Edit3 size={18} /></button>
+          <p>The AI has drafted your high-fidelity PRD.</p>
+          <div className="glass-card prd-card" style={{ marginBottom: '24px', padding: '0', overflow: 'hidden' }}>
+            <div style={{ textAlign: 'center', margin: '40px 0 20px 0' }}>
+              <h1 style={{ margin: '0 0 16px 0', fontSize: '2rem', color: 'var(--text-primary)' }}>{prdData.title || "Product Requirements Document"}</h1>
             </div>
-            
-            <div style={{ marginTop: '16px' }}>
-              <strong style={{ color: 'var(--text-secondary)' }}>Executive Summary</strong>
-              <p style={{ marginTop: '8px', color: 'var(--text-primary)' }}>{prdData.prd?.executive_summary}</p>
-            </div>
-
-            <div style={{ marginTop: '24px' }}>
-              <strong style={{ color: 'var(--text-secondary)' }}>Success Metrics</strong>
-              <ul style={{ marginTop: '8px', paddingLeft: '20px', color: 'var(--text-primary)' }}>
-                {prdData.prd?.success_metrics?.map((metric, idx) => (
-                  <li key={idx}>{metric.metric || metric}</li>
-                ))}
-              </ul>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0', padding: '0 20px 20px 20px' }}>
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-panel)', marginBottom: '16px' }}>
+                <div onClick={() => toggleSection('exec')} style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {expandedSections['exec'] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                  <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Executive Summary</h2>
+                </div>
+                {expandedSections['exec'] && (
+                  <div style={{ padding: '20px', borderTop: '1px solid var(--border-color)' }}>
+                    <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{prdData.executive_summary}</p>
+                  </div>
+                )}
+              </div>
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-panel)' }}>
+                <div onClick={() => toggleSection('metrics')} style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {expandedSections['metrics'] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                  <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Problem & Metrics</h2>
+                </div>
+                {expandedSections['metrics'] && (
+                  <div style={{ padding: '20px', borderTop: '1px solid var(--border-color)' }}>
+                    <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+                      <strong>Problem:</strong> {prdData.problem_statement}<br/><br/>
+                      <strong>Metrics:</strong><br/>
+                      {Array.isArray(prdData.success_metrics) ? prdData.success_metrics.map(m => m.metric || m).join('\n') : prdData.success_metrics}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
-          <button className="btn" onClick={generateEpics} disabled={loading}>
-            {loading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-            {loading ? 'Decomposing into Epics...' : 'Approve & Generate Epics'}
+          <button className="btn" onClick={reviewPersonas} disabled={loading}>
+            Approve PRD & Review Personas <ChevronRight size={18} />
           </button>
         </div>
       )}
 
-      {step === 3 && epicsData && (
+      {step === 3 && personasData && (
         <div className="animate-fade-in">
-          <h1>Review Epics</h1>
-          <p>Your product has been broken down into major themes (Epics). Ready to plan sprints?</p>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-            {epicsData.epics?.map((epic, idx) => (
+          <h1>Review Target Personas</h1>
+          <p>We've identified the key users for this product based on your PRD.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            {personasData.map((p, idx) => (
               <div key={idx} className="glass-card" style={{ padding: '20px' }}>
-                <h3 style={{ marginBottom: '8px' }}>{epic.title}</h3>
-                <p style={{ fontSize: '0.9rem', marginBottom: '0' }}>{epic.description}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} color="white" /></div>
+                  <div>
+                    <h3 style={{ margin: 0 }}>{p.name || p.role}</h3>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{p.role}</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.9rem' }}><strong>Goals:</strong> {Array.isArray(p.goals) ? p.goals[0] : p.goals}</p>
+                <p style={{ fontSize: '0.9rem' }}><strong>Pain Points:</strong> {Array.isArray(p.pain_points) ? p.pain_points[0] : p.pain_points}</p>
               </div>
             ))}
           </div>
-
-          <button className="btn" onClick={finalizePlan}>
-            Go to Backlog
+          <button className="btn" onClick={generateEpicsAndRoadmap} disabled={loading}>
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Map size={18} />}
+            {loading ? 'Decomposing Epics & Roadmaps...' : 'Approve Personas & Generate Roadmap'}
           </button>
         </div>
       )}
 
-      {step === 4 && (
-        <div className="animate-fade-in" style={{ textAlign: 'center', marginTop: '60px' }}>
-          <CheckCircle2 size={48} color="var(--success)" style={{ marginBottom: '24px' }} />
-          <h1>Plan Ready!</h1>
-          <p>Your product plan is initialized. Visit the Backlog to view stories and tasks.</p>
+      {step === 4 && roadmapData && (
+        <div className="animate-fade-in">
+          <h1>Review Strategic Roadmap</h1>
+          <p>Your product has been broken down into milestones and Epics.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+            {roadmapData.map((milestone, idx) => (
+              <div key={idx} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ background: 'var(--bg-panel)', padding: '10px 16px', borderRadius: '8px', textAlign: 'center', minWidth: '100px' }}>
+                  <strong style={{ color: 'var(--accent-color)' }}>{milestone.timeframe}</strong>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 4px 0' }}>{milestone.title}</h3>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{milestone.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn" onClick={reviewBacklog}>
+            Approve Roadmap & View Backlog <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {step === 5 && tasksData && (
+        <div className="animate-fade-in">
+          <h1>Review Backlog & Sprints</h1>
+          <p>Your Epics have been decomposed into actionable tickets ready for sprint planning.</p>
+          <div className="glass-card" style={{ marginBottom: '24px', padding: '0', overflow: 'hidden' }}>
+            {tasksData.map((task, idx) => (
+              <div key={idx} style={{ padding: '16px 20px', borderBottom: idx !== tasksData.length-1 ? '1px solid var(--border-color)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <ListTodo size={16} color="var(--text-secondary)" />
+                  <span style={{ fontSize: '0.95rem' }}>{task.title}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <span className={`badge ${task.priority.toLowerCase()}`}>{task.priority}</span>
+                  <span className="badge effort">{task.effort} pts</span>
+                  <span className="badge primary">{task.sprint}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn" onClick={finalizePlan} disabled={loading}>
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            {loading ? 'Creating Complete Workspace...' : 'Create and Finalize Product'}
+          </button>
         </div>
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}} />
     </div>
   );

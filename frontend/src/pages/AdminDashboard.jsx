@@ -19,9 +19,21 @@ export const AdminDashboard = () => {
       });
   }, []);
 
+  const userRole = localStorage.getItem('userRole') || 'user';
+
+  if (userRole !== 'admin') {
+    return (
+      <div className="content-area animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
+        <AlertCircle size={48} color="var(--warning)" style={{ marginBottom: '16px' }} />
+        <h2>Access Denied</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>You do not have permission to view the Admin Dashboard.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="content-area animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      <div className="content-area animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '400px' }}>
         <Loader2 className="animate-spin" size={48} color="var(--accent-color)" />
       </div>
     );

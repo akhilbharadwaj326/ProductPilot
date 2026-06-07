@@ -1,7 +1,7 @@
 # Environment variables
 .env
 .env.*
-!.env.example
+*.env*
 
 # Python
 venv/
@@ -11,3 +11,8 @@ __pycache__/
 # Ignore IdeaForge old file
 IdeaForge_Product_Discovery_and_Strategy.md.md
 IdeaForge_Product_Discovery_and_Strategy.md
+
+# Ignore db and docs
+productpilot.db
+docs/PRD_Example_AI_Feedback_Analyzer.pdf
+docs/Setting_page_sections.md

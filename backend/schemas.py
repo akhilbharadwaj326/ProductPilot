@@ -47,7 +47,7 @@ class ProjectCreate(ProjectBase):
 
 class Project(ProjectBase):
     id: int
-    owner_id: int
+    owner_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     artifacts: List[Artifact] = []
