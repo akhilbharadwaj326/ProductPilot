@@ -10,6 +10,15 @@ logger.setLevel(logging.INFO)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Load the master system prompt dynamically
+PROMPT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "docs", "product_pilot_system_prompt.md")
+try:
+    with open(PROMPT_PATH, "r", encoding="utf-8") as f:
+        MASTER_SYSTEM_PROMPT = f.read()
+except Exception as e:
+    logger.error(f"Failed to load master system prompt: {e}")
+    MASTER_SYSTEM_PROMPT = "You are Product Pilot, an enterprise-grade AI Product Intelligence System. Output valid JSON only."
+
 def execute_with_backoff(func, max_retries=3, base_delay=2):
     """Executes a function with exponential backoff to handle rate limits."""
     for attempt in range(max_retries):
@@ -23,14 +32,16 @@ def execute_with_backoff(func, max_retries=3, base_delay=2):
             logger.warning(f"OpenAI API call failed. Retrying in {delay} seconds. Error: {str(e)}")
             time.sleep(delay)
 
-def _call_json_api(prompt: str, system_prompt: str = "You are a world-class Product Manager assistant. You output valid JSON only.") -> dict:
+def _call_json_api(user_prompt: str) -> dict:
     def _call_openai():
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
+            # Using gpt-4-turbo-preview because the system prompt is ~19,000 tokens. 
+            # This requires a 128k context window to process safely without truncation.
+            model="gpt-4-turbo-preview", 
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": MASTER_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
         )
@@ -40,89 +51,71 @@ def _call_json_api(prompt: str, system_prompt: str = "You are a world-class Prod
 
 def generate_prd(idea: str, target_audience: str, business_goals: str) -> dict:
     prompt = f"""
-    Based on the following raw product idea, target audience, and business goals, generate a comprehensive, structured Product Requirements Document (PRD).
+    EXECUTE STEP 1 (PROBLEM), STEP 2 (USERS), STEP 3 (OUTCOMES), AND STEP 4 (REQUIREMENTS).
     
-    Idea: {idea}
+    Raw Idea: {idea}
     Target Audience: {target_audience}
     Business Goals: {business_goals}
     
-    Your output MUST be a valid JSON object matching this schema:
+    Your output MUST be a valid JSON object matching Schema 1 (Persona) and Schema 2 (PRD) combined under a root object.
+    Example:
     {{
-        "title": "A short, catchy title for the product",
-        "executive_summary": "1 paragraph summary",
-        "user_personas": [
-            {{"name": "Persona Name", "role": "Role", "pain_points": ["point 1"]}}
-        ],
-        "key_features": [
-            {{"name": "Feature Name", "description": "What it does", "priority": "High|Medium|Low"}}
-        ],
-        "success_metrics": ["metric 1"]
+      "personas": [ {{ ...schema 1... }} ],
+      "prd": {{ ...schema 2... }}
     }}
+    
+    Output ONLY valid JSON.
     """
     return _call_json_api(prompt)
 
 def generate_epics(prd_content: dict) -> dict:
     prompt = f"""
-    Based on the following PRD, extract and generate a list of Epics needed to build the product.
+    EXECUTE STEP 5 (FEATURES) AND STEP 6 (EPICS).
     
-    PRD JSON:
+    Based on the following approved PRD and Personas:
     {json.dumps(prd_content)}
     
-    Your output MUST be a valid JSON object matching this schema:
+    Your output MUST be a valid JSON object containing an array of Features (Schema 3) and an array of Epics (Schema 4).
+    Example:
     {{
-        "epics": [
-            {{
-                "title": "Epic Title",
-                "description": "Epic description",
-                "goal": "What this epic achieves",
-                "priority_score": 8.5
-            }}
-        ]
+      "features": [ {{ ...schema 3... }} ],
+      "epics": [ {{ ...schema 4... }} ]
     }}
+    
+    Output ONLY valid JSON.
     """
     return _call_json_api(prompt)
 
 def generate_stories(epic_content: dict) -> dict:
     prompt = f"""
-    Based on the following Epic, generate a list of agile User Stories.
+    EXECUTE STEP 7 (STORIES).
     
-    Epic JSON:
+    Based on the following approved Epics and Features:
     {json.dumps(epic_content)}
     
-    Your output MUST be a valid JSON object matching this schema:
+    Your output MUST be a valid JSON object containing an array of User Stories (Schema 5) corresponding to the Epics.
+    Example:
     {{
-        "stories": [
-            {{
-                "title": "Story Title",
-                "narrative": "As a [persona], I want [capability] so that [outcome]",
-                "acceptance_criteria": [
-                    {{"given": "...", "when": "...", "then": "..."}}
-                ],
-                "story_points": 3
-            }}
-        ]
+      "stories": [ {{ ...schema 5... }} ]
     }}
+    
+    Output ONLY valid JSON. Ensure strict traceability (epic_ids must match).
     """
     return _call_json_api(prompt)
 
 def generate_tasks(story_content: dict) -> dict:
-    system_prompt = "You are a world-class Engineering Lead. You output valid JSON only."
     prompt = f"""
-    Based on the following User Story, generate a list of concrete engineering tasks required to implement it.
+    EXECUTE STEP 8 (TASKS) AND STEP 9 (DEPENDENCIES).
     
-    Story JSON:
+    Based on the following approved User Stories:
     {json.dumps(story_content)}
     
-    Your output MUST be a valid JSON object matching this schema:
+    Your output MUST be a valid JSON object containing an array of Engineering Tasks (Schema 6) corresponding to the Stories.
+    Example:
     {{
-        "tasks": [
-            {{
-                "title": "Task Title",
-                "type": "frontend|backend|database|infrastructure",
-                "estimated_hours": 4,
-                "complexity": "low|medium|high"
-            }}
-        ]
+      "tasks": [ {{ ...schema 6... }} ]
     }}
+    
+    Output ONLY valid JSON. Ensure strict traceability (story_ids must match).
     """
-    return _call_json_api(prompt, system_prompt)
+    return _call_json_api(prompt)
