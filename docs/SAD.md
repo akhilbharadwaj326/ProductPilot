@@ -1,5 +1,5 @@
 # System Architecture Document (SAD)
-**Product:** IdeaForge
+**Product:** ProductPilot
 
 ## 1. Overview & Technology Stack
 - **Frontend:** React (Modern UI, highly interactive, fast).

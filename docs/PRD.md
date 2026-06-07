@@ -1,9 +1,9 @@
 # Product Requirements Document (PRD)
-**Product Name:** IdeaForge
+**Product Name:** ProductPilot
 **Vision:** Become the AI Product Manager that guides teams from product discovery to development execution.
 
 ## 1. Product Overview
-IdeaForge acts as an AI-powered Idea-to-Execution Engine. It uses a structured input (product ideas, constraints, goals) and an AI processing backend (OpenAI) to generate comprehensive product documentation, ending with an engineering-ready sprint plan.
+ProductPilot acts as an AI-powered Idea-to-Execution Engine. It uses a structured input (product ideas, constraints, goals) and an AI processing backend (OpenAI) to generate comprehensive product documentation, ending with an engineering-ready sprint plan.
 
 ## 2. Jobs To Be Done (JTBD)
 - **Primary JTBD:** "When I have a product idea, I want to quickly convert it into a prioritized, execution-ready plan so my team can start building with confidence."

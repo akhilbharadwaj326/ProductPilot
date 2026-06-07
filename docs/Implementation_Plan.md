@@ -1,6 +1,6 @@
-# Implementation Plan: IdeaForge
+# Implementation Plan: ProductPilot
 
-This document outlines the step-by-step implementation phases for IdeaForge, taking the product from concept to a deployed, enterprise-grade application.
+This document outlines the step-by-step implementation phases for ProductPilot, taking the product from concept to a deployed, enterprise-grade application.
 
 ## Phase 1: Foundation & Setup
 **Objective:** Establish the development environment and basic scaffolding.

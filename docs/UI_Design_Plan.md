@@ -1,7 +1,7 @@
-# UI/UX Design Plan: IdeaForge Workspace
+# UI/UX Design Plan: ProductPilot Workspace
 
 ## 1. Design Philosophy & Aesthetic
-IdeaForge will deliver a world-class, enterprise-grade user experience that combines the best elements of:
+ProductPilot will deliver a world-class, enterprise-grade user experience that combines the best elements of:
 - **Linear:** Fast, keyboard-first navigation, sharp typography (e.g., Inter or Roboto), and a sleek aesthetic with distinct structural boundaries.
 - **Notion:** Document-style editing, inline blocks, and a clean, spacious canvas for reviewing PRDs, Personas, and long-form content.
 - **Jira:** Robust issue tracking, explicit progress states, and clear sprint grouping.

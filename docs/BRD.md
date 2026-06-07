@@ -1,10 +1,10 @@
 # Business Requirements Document (BRD)
-**Product Name:** IdeaForge
+**Product Name:** ProductPilot
 **Tagline:** From Idea to Sprint in Minutes
 **Mission:** Help teams transform raw ideas into structured, prioritized, engineering-ready execution plans using AI.
 
 ## 1. Executive Summary
-IdeaForge is an AI-powered platform designed to tackle the inefficiencies in product discovery and strategy. By leveraging the OpenAI API, it bridges the gap between raw product ideas and execution-ready plans (PRDs, user stories, backlogs), significantly cutting down the time and manual effort required by product teams.
+ProductPilot is an AI-powered platform designed to tackle the inefficiencies in product discovery and strategy. By leveraging the OpenAI API, it bridges the gap between raw product ideas and execution-ready plans (PRDs, user stories, backlogs), significantly cutting down the time and manual effort required by product teams.
 
 ## 2. Business Problem
 Product Managers, founders, and engineering teams struggle to convert raw product ideas into structured plans. Creating PRDs, user stories, and sprint plans manually leads to:
@@ -19,7 +19,7 @@ Product Managers, founders, and engineering teams struggle to convert raw produc
 
 ## 4. Business Value & Success Criteria
 ### Value Proposition
-IdeaForge reduces planning effort from days to minutes, offering higher alignment, better prioritization, and faster development kickoffs.
+ProductPilot reduces planning effort from days to minutes, offering higher alignment, better prioritization, and faster development kickoffs.
 
 ### Metrics & KPIs
 - **North Star Metric:** Percentage of ideas converted into sprint-ready backlogs.
