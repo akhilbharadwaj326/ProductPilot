@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Rocket, LayoutDashboard, FileText, Users, CheckSquare, Layers, Map, Settings } from 'lucide-react';
+import { Rocket, LayoutDashboard, FileText, Users, CheckSquare, Layers, Map, Settings, LogOut } from 'lucide-react';
+import { AuthPage } from './Auth';
 import './index.css';
 
 const Sidebar = () => {
@@ -23,7 +24,7 @@ const Sidebar = () => {
         <Rocket className="logo-icon" size={24} />
         ProductPilot
       </div>
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav" style={{ flex: 1 }}>
         {navItems.map((item) => (
           <Link
             key={item.name}
@@ -35,6 +36,12 @@ const Sidebar = () => {
           </Link>
         ))}
       </nav>
+      <div className="sidebar-footer" style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
+        <Link to="/login" className="nav-item">
+          <LogOut size={18} />
+          Sign Out
+        </Link>
+      </div>
     </aside>
   );
 };
@@ -81,32 +88,42 @@ const IdeaWizard = () => {
   );
 };
 
+const MainLayout = ({ children }) => {
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <main className="main-content">
+        <header className="topbar">
+          <div className="topbar-title">Workspace / Idea Wizard</div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Draft Mode</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+              A
+            </div>
+          </div>
+        </header>
+        {children}
+      </main>
+    </div>
+  );
+};
+
 function App() {
   return (
     <Router>
-      <div className="app-container">
-        <Sidebar />
-        <main className="main-content">
-          <header className="topbar">
-            <div className="topbar-title">Workspace / Idea Wizard</div>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Draft Mode</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                A
-              </div>
+      <Routes>
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/" element={<MainLayout><IdeaWizard /></MainLayout>} />
+        <Route path="*" element={
+          <MainLayout>
+            <div className="content-area animate-fade-in">
+              <h2>Coming Soon</h2>
+              <p>This section is under construction.</p>
             </div>
-          </header>
-          <Routes>
-            <Route path="/" element={<IdeaWizard />} />
-            <Route path="*" element={
-              <div className="content-area animate-fade-in">
-                <h2>Coming Soon</h2>
-                <p>This section is under construction.</p>
-              </div>
-            } />
-          </Routes>
-        </main>
-      </div>
+          </MainLayout>
+        } />
+      </Routes>
     </Router>
   );
 }
