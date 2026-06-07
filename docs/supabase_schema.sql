@@ -4,10 +4,14 @@
 -- 1. Create Projects Table
 CREATE TABLE projects (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id TEXT, -- Maps the project to a specific user email or ID
   name TEXT NOT NULL,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
 );
+
+-- Migration for existing databases
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS user_id TEXT;
 
 -- 2. Add project_id to existing tables so we can isolate data
 ALTER TABLE prds ADD COLUMN project_id UUID REFERENCES projects(id) ON DELETE CASCADE;

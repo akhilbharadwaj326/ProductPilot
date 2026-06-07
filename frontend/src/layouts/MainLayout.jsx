@@ -39,7 +39,7 @@ const Sidebar = () => {
         ))}
       </nav>
       <div className="sidebar-footer" style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
-        <Link to="/login" className="nav-item" onClick={() => localStorage.removeItem('userRole')}>
+        <Link to="/login" className="nav-item" onClick={() => { localStorage.removeItem('userRole'); localStorage.removeItem('userId'); }}>
           <LogOut size={18} />
           Sign Out
         </Link>

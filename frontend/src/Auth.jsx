@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Rocket, Mail, Lock, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useProject } from './ProjectContext';
 import './Auth.css';
 
 export const AuthPage = ({ mode = 'login' }) => {
@@ -9,13 +10,34 @@ export const AuthPage = ({ mode = 'login' }) => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const navigate = useNavigate();
+  const { fetchProjects } = useProject();
 
-  const handleGoogleSuccess = (credentialResponse) => {
+  const handleGoogleSuccess = async (credentialResponse) => {
     console.log('Google Auth Success:', credentialResponse);
-    // Decode token or send to backend to verify
-    // const decoded = jwt_decode(credentialResponse.credential);
-    localStorage.setItem('userRole', 'user');
-    navigate('/');
+    
+    // Decode the JWT token to get the user's real email
+    try {
+      const base64Url = credentialResponse.credential.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const decoded = JSON.parse(jsonPayload);
+      
+      localStorage.setItem('userRole', 'user');
+      localStorage.setItem('userId', decoded.email); // Use their actual Google email
+      localStorage.setItem('userName', decoded.name); // Optionally store name
+      
+      await fetchProjects();
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to decode Google JWT', error);
+      alert('Authentication failed to parse user details.');
+    }
   };
 
   const handleGoogleError = () => {
@@ -28,7 +50,11 @@ export const AuthPage = ({ mode = 'login' }) => {
     // Mock successful auth
     const role = email === 'admin@productpilot.com' ? 'admin' : 'user';
     localStorage.setItem('userRole', role);
-    navigate('/');
+    localStorage.setItem('userId', email);
+    
+    fetchProjects().then(() => {
+      navigate('/');
+    });
   };
 
   return (

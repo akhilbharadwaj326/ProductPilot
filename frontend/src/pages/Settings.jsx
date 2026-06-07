@@ -16,28 +16,24 @@ export const Settings = () => {
   // Password Form State
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
-  // Mock Data States
+  // Initial States
   const [profile, setProfile] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@productpilot.com',
-    jobTitle: 'Product Manager',
+    firstName: localStorage.getItem('userName')?.split(' ')[0] || '',
+    lastName: localStorage.getItem('userName')?.split(' ').slice(1).join(' ') || '',
+    email: localStorage.getItem('userId') || '',
+    jobTitle: '',
     theme: 'system',
     timeZone: 'UTC'
   });
   
   const [workspace, setWorkspace] = useState({
-    name: 'Acme Corp',
-    description: 'Enterprise B2B Software',
+    name: '',
+    description: '',
     sprintDuration: '2 Weeks',
     visibility: 'Private'
   });
 
-  const [team, setTeam] = useState([
-    { id: 1, name: 'John Doe', email: 'john@productpilot.com', role: 'Owner', status: 'Active' },
-    { id: 2, name: 'Alice Smith', email: 'alice@productpilot.com', role: 'Admin', status: 'Active' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@productpilot.com', role: 'Developer', status: 'Pending' }
-  ]);
+  const [team, setTeam] = useState([]);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Developer');

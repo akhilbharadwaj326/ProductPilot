@@ -10,35 +10,48 @@ export const ProjectProvider = ({ children }) => {
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    const userId = localStorage.getItem('userId');
+    
+    // If not logged in, do not fetch projects
+    if (!userId) {
+      setProjects([]);
+      setActiveProject(null);
+      setIsLoading(false);
+      return;
+    }
+    
+    const query = supabase.from('projects').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    const { data, error } = await query;
+    
+    if (!error && data) {
+      setProjects(data);
+      if (data.length > 0 && !activeProject) {
+        setActiveProject(data[0]);
+      } else if (data.length === 0) {
+        setActiveProject(null);
+      }
+    } else {
+      setProjects([]);
+      setActiveProject(null);
+    }
+    setIsLoading(false);
+  };
+
   // Fetch all projects on mount
   useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      // We will try to fetch projects from Supabase. 
-      // If the projects table doesn't exist yet, we will mock it gracefully.
-      const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setProjects(data);
-        if (data.length > 0 && !activeProject) {
-          setActiveProject(data[0]);
-        }
-      } else {
-        // Fallback mock data if the user hasn't run the new SQL yet
-        const mockProjects = [
-          { id: '1', name: 'ProductPilot Platform', description: 'AI driven product management workspace', created_at: new Date().toISOString() }
-        ];
-        setProjects(mockProjects);
-        setActiveProject(mockProjects[0]);
-      }
-      setIsLoading(false);
-    };
-
     fetchProjects();
   }, []);
 
   const createProject = async (name, description) => {
-    const { data, error } = await supabase.from('projects').insert([{ name, description }]).select();
+    const userId = localStorage.getItem('userId');
+    const { data, error } = await supabase.from('projects').insert([{ 
+      name, 
+      description,
+      user_id: userId || 'anonymous'
+    }]).select();
+    
     if (!error && data) {
       setProjects([data[0], ...projects]);
       setActiveProject(data[0]);
@@ -48,7 +61,7 @@ export const ProjectProvider = ({ children }) => {
   };
 
   return (
-    <ProjectContext.Provider value={{ activeProject, setActiveProject, projects, setProjects, createProject, isLoading }}>
+    <ProjectContext.Provider value={{ activeProject, setActiveProject, projects, setProjects, createProject, fetchProjects, isLoading }}>
       {children}
     </ProjectContext.Provider>
   );

@@ -125,14 +125,14 @@ export const Dashboard = () => {
               <Clock size={24} color="var(--warning)" />
               <div>
                 <h3 style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Active Sprints</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: 'bold' }}>{Math.max(1, projects.length - 1)}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: 'bold' }}>0</p>
               </div>
             </div>
             <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px' }}>
               <ListTodo size={24} color="var(--text-secondary)" />
               <div>
                 <h3 style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Total Tasks</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: 'bold' }}>{projects.length * 24}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: 'bold' }}>0</p>
               </div>
             </div>
           </div>

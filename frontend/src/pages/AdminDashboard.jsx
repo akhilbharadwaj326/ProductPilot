@@ -74,7 +74,7 @@ export const AdminDashboard = () => {
           <AlertCircle size={24} className="stat-icon" />
           <div className="stat-details">
             <h3>Error Rate</h3>
-            <p className="stat-value">{stats?.error_rate || "0.12"}%</p>
+            <p className="stat-value">{stats?.error_rate || "0.00"}%</p>
           </div>
         </div>
       </div>
