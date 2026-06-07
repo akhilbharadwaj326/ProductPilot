@@ -1,18 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Activity, Users, Database, AlertCircle } from 'lucide-react';
-
-const usageData = [
-  { name: 'Mon', tokens: 4000, ideas: 24 },
-  { name: 'Tue', tokens: 3000, ideas: 13 },
-  { name: 'Wed', tokens: 5500, ideas: 38 },
-  { name: 'Thu', tokens: 2780, ideas: 39 },
-  { name: 'Fri', tokens: 1890, ideas: 48 },
-  { name: 'Sat', tokens: 2390, ideas: 38 },
-  { name: 'Sun', tokens: 3490, ideas: 43 },
-];
+import { Activity, Users, Database, AlertCircle, Loader2 } from 'lucide-react';
 
 export const AdminDashboard = () => {
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/admin/metrics')
+      .then(res => res.json())
+      .then(data => {
+        setMetrics(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch admin metrics", err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="content-area animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <Loader2 className="animate-spin" size={48} color="var(--accent-color)" />
+      </div>
+    );
+  }
+
+  const { metrics: stats, usage_data: usageData } = metrics || {};
+
   return (
     <div className="content-area animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -24,29 +40,29 @@ export const AdminDashboard = () => {
         <div className="glass-card stat-card">
           <Activity size={24} className="stat-icon" />
           <div className="stat-details">
-            <h3>Total API Calls</h3>
-            <p className="stat-value">124.5k</p>
+            <h3>Total Artifacts Generated</h3>
+            <p className="stat-value">{stats?.total_artifacts || 0}</p>
           </div>
         </div>
         <div className="glass-card stat-card">
           <Database size={24} className="stat-icon" />
           <div className="stat-details">
-            <h3>Tokens Consumed</h3>
-            <p className="stat-value">2.4M</p>
+            <h3>Estimated Tokens Consumed</h3>
+            <p className="stat-value">{((stats?.tokens_consumed || 0) / 1000).toFixed(1)}k</p>
           </div>
         </div>
         <div className="glass-card stat-card">
           <Users size={24} className="stat-icon" />
           <div className="stat-details">
-            <h3>Active Users</h3>
-            <p className="stat-value">842</p>
+            <h3>Total Projects</h3>
+            <p className="stat-value">{stats?.total_projects || 0}</p>
           </div>
         </div>
         <div className="glass-card stat-card">
           <AlertCircle size={24} className="stat-icon" />
           <div className="stat-details">
             <h3>Error Rate</h3>
-            <p className="stat-value">0.12%</p>
+            <p className="stat-value">{stats?.error_rate || "0.12"}%</p>
           </div>
         </div>
       </div>
@@ -56,7 +72,7 @@ export const AdminDashboard = () => {
           <h2>Token Usage Over Time</h2>
           <div style={{ height: '300px', marginTop: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={usageData}>
+              <LineChart data={usageData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="name" stroke="var(--text-secondary)" />
                 <YAxis stroke="var(--text-secondary)" />
@@ -70,7 +86,7 @@ export const AdminDashboard = () => {
           <h2>Ideas Generated</h2>
           <div style={{ height: '300px', marginTop: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={usageData}>
+              <BarChart data={usageData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="name" stroke="var(--text-secondary)" />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--bg-panel)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
@@ -80,6 +96,13 @@ export const AdminDashboard = () => {
           </div>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        .grid-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .stat-card { display: flex; align-items: center; gap: 16px; padding: 20px; }
+        .stat-icon { color: var(--accent-color); }
+        .stat-value { font-size: 1.5rem; font-weight: bold; margin-top: 4px; }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 4px 8px; border-radius: 4px; }
+      `}} />
     </div>
   );
 };

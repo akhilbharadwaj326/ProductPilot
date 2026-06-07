@@ -6,7 +6,7 @@ import logging
 
 from . import models
 from .database import engine
-from .routers import ai, projects, scoring
+from .routers import ai, projects, scoring, admin, auth
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -39,6 +39,8 @@ app.add_middleware(
 app.include_router(projects.router)
 app.include_router(ai.router)
 app.include_router(scoring.router)
+app.include_router(admin.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def read_root():
