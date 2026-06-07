@@ -1,0 +1,106 @@
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.stat-icon {
+  color: var(--accent-color);
+}
+
+.stat-details h3 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0;
+  color: var(--text-primary);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.1);
+}
+
+.badge.high { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+.badge.medium { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+.badge.low { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+.badge.effort { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-secondary); }
+.badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+
+/* Drag and Drop */
+.dnd-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
+.dnd-task-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.dnd-task {
+  display: flex;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 8px;
+  gap: 12px;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.dnd-task:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dnd-task.dragging {
+  border-color: var(--accent-color);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.task-content {
+  flex: 1;
+}
+
+.task-content p {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.task-meta {
+  display: flex;
+  gap: 8px;
+}
